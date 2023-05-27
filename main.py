@@ -61,7 +61,8 @@ class Input_Generator:
         'energy': '\n',
         'optimization': '!OPT\n',
         'vibration': '!FREQ\n',
-        'vib + freq': '!OPT\n!FREQ\n'
+        'vib + freq': '!OPT\n!FREQ\n',
+        'nmr' : '!NMR TightSCF\n' #Use default SCF setting for now
         }
 
         try:  
@@ -70,8 +71,13 @@ class Input_Generator:
                         f'#{file_name}\n' #Input title
                         f'#\n'
                         f'%maxcore 3000\n' #Memory to use
-                        f'\n'
-                        f'!{method} {basis_set}\n')
+                        f'\n')
+                
+                if calculation_type == 'nmr':
+                    f.write(f'!{method} {basis_set} AutoAux\n') #Use automatic auxilliary basis set for NMR maybe add options later
+                
+                else:
+                    f.write(f'!{method} {basis_set}\n')
 
                 f.write(calculation_statements.get(calculation_type, '\n'))
                 
@@ -80,6 +86,13 @@ class Input_Generator:
                         f'{xyz_content}'
                         f'*')
                 
+                if calculation_type == 'nmr':
+                    f.write(f'\n'
+                            f'%eprnmr\n'
+                            f'  Nuclei = all C {{ shift }}\n'
+                            f'  Nuclei = all H {{ shift }}\n'
+                            f'end\n')
+    
         except IOError as e:
             print(f"Error writing to file: {str(e)}")
 
@@ -88,7 +101,7 @@ class Input_Generator:
     def energy_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
         SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
         file_name = f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_{SMILES}_{orca_tasks[calculation_choice - 1]}.inp"
-        coordinate_type = 'xyz'
+        coordinate_type = 'xyz' #Coordinate type
         calculation_type = 'energy'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): ")) 
@@ -102,7 +115,7 @@ class Input_Generator:
     def optimization_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
         SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
         file_name = f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_{SMILES}_{orca_tasks[calculation_choice - 1]}.inp"
-        coordinate_type = 'xyz' #Coordinate type and spin, spin should be added as option
+        coordinate_type = 'xyz' #Coordinate type 
         calculation_type = 'optimization'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): ")) 
@@ -116,7 +129,7 @@ class Input_Generator:
     def vibrational_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
         SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
         file_name = f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_{SMILES}_{orca_tasks[calculation_choice - 1]}.inp"
-        coordinate_type = 'xyz' #Coordinate type and spin, spin should be added as option
+        coordinate_type = 'xyz' #Coordinate type 
         calculation_type = 'vibration'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): "))   
@@ -130,8 +143,22 @@ class Input_Generator:
     def opt_freq_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
         SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
         file_name = f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_{SMILES}_{orca_tasks[calculation_choice - 1]}.inp"
-        coordinate_type = 'xyz' #Coordinate type and spin, spin should be added as option
+        coordinate_type = 'xyz' #Coordinate type 
         calculation_type = 'vib + freq'
+        charge = input("Enter the charge (This is typically 0): ") 
+        spin = int(input("Enter the spin (This is typically 0): ")) 
+        xyz_content = smiles_to_xyz(SMILES)
+
+        Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
+                                         coordinate_type, charge, spin, xyz_content, calculation_type)
+        
+    #NMR calculation
+    @staticmethod
+    def nmr_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
+        SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
+        file_name = f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_{SMILES}_{orca_tasks[calculation_choice - 1]}.inp"
+        coordinate_type = 'xyz' #Coordinate type 
+        calculation_type = 'nmr'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): ")) 
         xyz_content = smiles_to_xyz(SMILES)
@@ -141,7 +168,7 @@ class Input_Generator:
 
 #Main function
 def main():
-    orca_tasks = ["Energy", "Geometry Optimization", "Vibrational Frequencies", "Optimize + Vib Freq"]
+    orca_tasks = ["Energy", "Geometry Optimization", "Vibrational Frequencies", "Optimize + Vib Freq", "NMR"]
     methods = ['B3LYP', 'HF', 'MP2', 'CCSD']
     basis_sets = ['STO-3G', '3-21G', '6-31G(d)', 'def2-SVP']
 
@@ -152,7 +179,8 @@ def main():
         1: Input_Generator.energy_input,
         2: Input_Generator.optimization_input,
         3: Input_Generator.vibrational_input,
-        4: Input_Generator.opt_freq_input
+        4: Input_Generator.opt_freq_input,
+        5: Input_Generator.nmr_input
     }
 
     if calculation_choice in calculation_functions:
