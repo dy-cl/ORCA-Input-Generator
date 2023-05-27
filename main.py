@@ -1,4 +1,6 @@
 from openbabel import openbabel as ob
+import datetime
+import os
 
 #Menu wrapper function to reuse
 def select_from_menu(options):
@@ -38,6 +40,11 @@ def smiles_to_xyz(smiles):
 
     return xyz_content
 
+#Add timestamp to file name to avoid overwriting
+def generate_unique_filename(file_name):
+    base_name, extension = os.path.splitext(file_name)
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    return f"{base_name}_{timestamp}{extension}"
 
 #File generators
 class Input_Generator:
@@ -48,27 +55,33 @@ class Input_Generator:
 
         spinmult = (2*spin) + 1
 
+        unique_file_name = generate_unique_filename(file_name)
+
         calculation_statements = {
         'energy': '\n',
         'optimization': '!OPT\n',
         'vibration': '!FREQ\n',
         'vib + freq': '!OPT\n!FREQ\n'
         }
-         
-        with open(file_name, 'w') as f:
-            f.write(f'#\n'
-                    f'#{file_name}\n' #Input title
-                    f'#\n'
-                    f'%maxcore 3000\n' #Memory to use
-                    f'\n'
-                    f'!{method} {basis_set}\n')
 
-            f.write(calculation_statements.get(calculation_type, '\n'))
-            
-            f.write(f'\n'
-                    f'* {coordinate_type} {charge} {spinmult} \n'
-                    f'{xyz_content}'
-                    f'*')
+        try:  
+            with open(unique_file_name, 'w') as f:
+                f.write(f'#\n'
+                        f'#{file_name}\n' #Input title
+                        f'#\n'
+                        f'%maxcore 3000\n' #Memory to use
+                        f'\n'
+                        f'!{method} {basis_set}\n')
+
+                f.write(calculation_statements.get(calculation_type, '\n'))
+                
+                f.write(f'\n'
+                        f'* {coordinate_type} {charge} {spinmult} \n'
+                        f'{xyz_content}'
+                        f'*')
+                
+        except IOError as e:
+            print(f"Error writing to file: {str(e)}")
 
     #Energy calculation
     @staticmethod
