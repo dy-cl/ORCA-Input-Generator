@@ -31,60 +31,82 @@ def smiles_to_xyz(smiles):
     #Write to XYZ format
     xyz_content = obConversion.WriteString(mol)
 
-    lines = xyz_content.split('\n')  #Split the string into lines
+    lines = xyz_content.split('\n') #Split the string into lines
 
-    xyz_content = '\n'.join(lines[2:])  #Join the lines, excluding the first two
+    xyz_content = '\n'.join(lines[2:]) #Join the lines, excluding the first two
 
     return xyz_content
 
 
+#File generators
 class Input_Generator:
+
+    #Reusable file writer with varying parameters
     @staticmethod
-    def write_input_file(file_name, method, basis_set, coordinate_type, xyz_content, is_optimization):
+    def write_input_file(file_name, method, basis_set, coordinate_type, xyz_content, calculation_type):
         with open(file_name, 'w') as f:
             f.write(f'#\n'
-                    f'#{file_name}\n'
+                    f'#{file_name}\n' #Input title
                     f'#\n'
-                    f'%maxcore 3000\n'
+                    f'%maxcore 3000\n' #Memory to use
                     f'\n'
                     f'!{method} {basis_set}\n')
 
-            if is_optimization:
+            if calculation_type == 'energy':
+                f.write('\n')
+            elif calculation_type == 'optimization':
                 f.write('!OPT\n')
+            elif calculation_type == 'vibration':
+                f.write('!FREQ\n')
             
             f.write(f'\n'
                     f'{coordinate_type}\n'
                     f'{xyz_content}'
                     f'*')
 
+    #Energy calculation
     @staticmethod
     def energy_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
         SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
         file_name = f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_{SMILES}_{orca_tasks[calculation_choice - 1]}.inp"
-        coordinate_type = '* xyz 0 1'
+        coordinate_type = '* xyz 0 1' #Coordinate type and spin, spin should be added as option
+        calculation_type = 'energy'
         xyz_content = smiles_to_xyz(SMILES)
         
-        Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], coordinate_type, xyz_content, False)
+        Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], coordinate_type, xyz_content, calculation_type)
     
+    #Geometry optimization
     @staticmethod
     def optimization_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
         SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
         file_name = f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_{SMILES}_{orca_tasks[calculation_choice - 1]}.inp"
-        coordinate_type = '* xyz 0 1'
+        coordinate_type = '* xyz 0 1' #Coordinate type and spin, spin should be added as option
+        calculation_type = 'optimization'
         xyz_content = smiles_to_xyz(SMILES)
         
-        Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], coordinate_type, xyz_content, True)
+        Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], coordinate_type, xyz_content, calculation_type)
+
+    #Vibration frequency calculation
+    @staticmethod
+    def vibrational_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
+        SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
+        file_name = f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_{SMILES}_{orca_tasks[calculation_choice - 1]}.inp"
+        coordinate_type = '* xyz 0 1' #Coordinate type and spin, spin should be added as option
+        calculation_type = 'vibration'
+        xyz_content = smiles_to_xyz(SMILES)
+
+        Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], coordinate_type, xyz_content, calculation_type)
 
 #Main function
 def main():
-    orca_tasks = ["Energy", "Geometry Optimization", "Molecular Orbital Energies", "Vibrational Frequencies", "NMR"]
-    methods = ['B3LYP']
-    basis_sets = ['STO-3G']
+    orca_tasks = ["Energy", "Geometry Optimization", "Vibrational Frequencies"]
+    methods = ['B3LYP', 'HF', 'MP2', 'CCSD']
+    basis_sets = ['STO-3G', '3-21G', '6-31G(d)', 'def2-SVP']
 
     print("Select Calculation: ")
     calculation_choice = select_from_menu(orca_tasks)
 
-    if calculation_choice in [1, 2, 3, 4, 5]:
+    if calculation_choice in [1, 2, 3, 4]:
         print("Select method: ")
         method_choice = select_from_menu(methods)
         print("Select basis set: ")
@@ -95,6 +117,8 @@ def main():
             Input_Generator.energy_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice)
         elif calculation_choice == 2:
             Input_Generator.optimization_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice)
+        elif calculation_choice == 3:
+            Input_Generator.vibrational_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice)
 
     print('File written')
 
