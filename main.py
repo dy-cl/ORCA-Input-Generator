@@ -3,15 +3,23 @@ import re
 import datetime
 import os
 
-#Menu wrapper function to reuse
 def select_from_menu(options):
+    """
+    Reusable menu function.
+
+    Parameters:
+    - options (list): List of options for the user to choose from.
+
+    Returns:
+    - choice (int): The user's choice.
+    """
 
     print()
-    max_width = max(len(option) for option in options)  # Find the maximum width of the options
+    max_width = max(len(option) for option in options)  #Find the maximum width of the options
 
     for i, option in enumerate(options, 1):
-        centered_option = option.center(max_width)  # Center the option within the maximum width
-        print(f"{i}. {centered_option.strip()}", end=" | ")
+        centered_option = option.center(max_width)  #Center the option within the maximum width
+        print(f"{i}. {centered_option.strip()}", end = " | ")
 
         if i % 6 == 0:  #Add a new line after every 6th option
             print()  
@@ -29,6 +37,17 @@ def select_from_menu(options):
 
 #to .xyz
 def to_xyz(molecule, molecule_format):
+    """
+    Convert molecular input to .xyz format.
+
+    Parameters:
+    - molecule (str): Molecular input string.
+    - molecule_format (str): Initial format type of the molecular string.
+
+    Returns:
+    - None: If xyz coordinates could not be generated.
+    - xyz_content: Otherwise.
+    """
     #Create Open Babel molecule object
     mol = ob.OBMol()
 
@@ -37,7 +56,7 @@ def to_xyz(molecule, molecule_format):
         in_format = "smi"
     elif molecule_format == 'InChI':
         in_format = "inchi"
-
+ 
     obConversion = ob.OBConversion()
     obConversion.SetInAndOutFormats(in_format, "xyz")
 
@@ -75,6 +94,19 @@ class Input_Generator:
     #Reusable file writer with varying parameters
     @staticmethod
     def write_input_file(file_name, method, basis_set, coordinate_type, charge, spin, xyz_content, calculation_type):
+        """
+        Reusable file writer.
+
+        Parameters:
+        - file_name (str): Name with which the file is saved.
+        - method (str): Method.
+        - basis_set (str): Basis set.
+        - coordinate_type (str): Currently only xyz is supported, expanded later.
+        - charge (int): Integer value for molecule charge (typically 0).
+        - spin (int): Integer value for molecule spin (typically 0).
+        - xyz_content (str): Cartesian coordinates.
+        - calculation_type (str): Calcultion to be requested from ORCA (eg. Optimization).
+        """
 
         spinmult = (2*spin) + 1
 
@@ -126,6 +158,21 @@ class Input_Generator:
         except IOError as e:
             print(f"Error writing to file: {str(e)}")
 
+    """
+    Calculation type specific functions located below here. Takes inputs obtain in main() and uses them to create
+    the calculation specific parameters that are passed to write_input_file.
+
+    Parameters:
+    - method_choice (int): Numerical user input for method choice.
+    - basis_choice (int): Numerical user input for basis set choice.
+    - molecule (str): Molecular input string.
+    - methods (list): List of all avaliable methods.
+    - basis_sets (list): List of all avaliable basis sets.
+    - orca_tasks (list): List of all avaliavle calculation types.
+    - calculation_choice (int):  Numerical user input for calculation type.
+    - name (str): User input for molecule name.
+    - molecule_format (str): Formant of molecular input string.
+    """
     #Energy calculation
     @staticmethod
     def energy_input(method_choice, basis_choice, molecule, methods, basis_sets, orca_tasks, calculation_choice, name, molecule_format):
@@ -141,7 +188,7 @@ class Input_Generator:
 
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-        return file_name
+      
     
     #Geometry optimization
     @staticmethod
@@ -158,7 +205,7 @@ class Input_Generator:
         
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-        return file_name
+        
     
     #Vibrational frequency calculation
     @staticmethod
@@ -175,8 +222,8 @@ class Input_Generator:
         
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-        return file_name
-    
+       
+   
     #Optimization and vibrational frequency calculation
     @staticmethod
     def opt_freq_input(method_choice, basis_choice, methods, basis_sets, orca_tasks, calculation_choice, name, molecule_format):
@@ -192,7 +239,7 @@ class Input_Generator:
 
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-        return file_name
+       
         
     #NMR calculation
     @staticmethod
@@ -209,7 +256,7 @@ class Input_Generator:
 
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-        return file_name
+ 
      
     #Excited states and UV-vis calculation
     @staticmethod
@@ -226,10 +273,19 @@ class Input_Generator:
         
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-        return file_name
+      
     
-#Main function
 def main():
+    """
+    Collects the following parameters to pass to file generator functions:
+
+    - input_types (str): The format type of the molecular input.
+    - orca_tasks (str): Selection of calculation to write in the input file.
+    - methods (str): Selection of method to write in the input file.
+    - basis_sets (str): Selection of basis sets to write in the input file.
+    - molecule (str): Molecule formatted according to the style chosen in input_types.
+
+    """
 
     input_types = ["SMILES", "InChI"]
     orca_tasks = ["Molecular Energy", "Geometry Optimization", "Vibrational Frequencies", "Optimize + Vib-Freq", "NMR", "UV-vis + Excited state"]
@@ -269,7 +325,7 @@ def main():
         
         name = input("Enter molecule name: ")
 
-        file_name = calculation_functions[calculation_choice](method_choice, basis_choice, molecule, methods, basis_sets, 
+        calculation_functions[calculation_choice](method_choice, basis_choice, molecule, methods, basis_sets, 
                                                   orca_tasks, calculation_choice, name, molecule_format)
 
     print('File written')
