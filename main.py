@@ -1,4 +1,5 @@
 from openbabel import openbabel as ob
+import re
 import datetime
 import os
 
@@ -26,17 +27,29 @@ def select_from_menu(options):
 
     return choice
 
-#SMILES to .xyz
-def smiles_to_xyz(smiles):
-    #Create Open Babel molecule object from SMILES
+#to .xyz
+def to_xyz(molecule, molecule_format):
+    #Create Open Babel molecule object
     mol = ob.OBMol()
+
+    #Set the input and output formats based on the molecule format
+    if molecule_format == 'SMILES':
+        in_format = "smi"
+    elif molecule_format == 'InChI':
+        in_format = "inchi"
+
     obConversion = ob.OBConversion()
-    obConversion.SetInAndOutFormats("smi", "xyz")
-    obConversion.ReadString(mol, smiles)
+    obConversion.SetInAndOutFormats(in_format, "xyz")
+
+    if not obConversion.ReadString(mol, molecule):
+        print("Error: Failed to read the molecule.")
+        return None
 
     #Generate 3D coordinates
     builder = ob.OBBuilder()
-    builder.Build(mol)
+    if not builder.Build(mol):
+        print("Error: Failed to generate 3D coordinates.")
+        return None
 
     #Add implicit hydrogens
     mol.AddHydrogens()
@@ -44,12 +57,12 @@ def smiles_to_xyz(smiles):
     #Write to XYZ format
     xyz_content = obConversion.WriteString(mol)
 
-    lines = xyz_content.split('\n') #Split the string into lines
-
-    xyz_content = '\n'.join(lines[2:]) #Join the lines, excluding the first two
-
+    lines = xyz_content.split('\n')
+    xyz_content = '\n'.join(lines[2:])
+     
     return xyz_content
-
+ 
+    
 #Add timestamp to file name to avoid overwriting
 def generate_unique_filename(file_name):
     base_name, extension = os.path.splitext(file_name)
@@ -115,99 +128,117 @@ class Input_Generator:
 
     #Energy calculation
     @staticmethod
-    def energy_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
-        SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  #Remove () and []
+    def energy_input(method_choice, basis_choice, molecule, methods, basis_sets, orca_tasks, calculation_choice, name, molecule_format):
+        if molecule == 'SMILES':
+            molecule = molecule.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  #Remove () and []
         file_name = (f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_"
-                     f"{SMILES}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
+                     f"{name}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
         coordinate_type = 'xyz' #Coordinate type
         calculation_type = 'energy'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): ")) 
-        xyz_content = smiles_to_xyz(SMILES)
-        
+        xyz_content = to_xyz(molecule, molecule_format)
+
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
+        return file_name
     
     #Geometry optimization
     @staticmethod
-    def optimization_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
-        SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  #Remove () and []
+    def optimization_input(method_choice, basis_choice, molecule, methods, basis_sets, orca_tasks, calculation_choice, name, molecule_format):
+        if molecule == 'SMILES':
+            molecule = molecule.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  #Remove () and []
         file_name = (f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_"
-                     f"{SMILES}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
-        coordinate_type = 'xyz' #Coordinate type 
+                     f"{name}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
+        coordinate_type = 'xyz' #Coordinate type
         calculation_type = 'optimization'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): ")) 
-        xyz_content = smiles_to_xyz(SMILES)
+        xyz_content = to_xyz(molecule, molecule_format)
         
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-
+        return file_name
+    
     #Vibrational frequency calculation
     @staticmethod
-    def vibrational_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
-        SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
+    def vibrational_input(method_choice, basis_choice, molecule, methods, basis_sets, orca_tasks, calculation_choice, name, molecule_format):
+        if molecule == 'SMILES':
+            molecule = molecule.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  #Remove () and []
         file_name = (f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_"
-                     f"{SMILES}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
-        coordinate_type = 'xyz' #Coordinate type 
+                     f"{name}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
+        coordinate_type = 'xyz' #Coordinate type
         calculation_type = 'vibration'
         charge = input("Enter the charge (This is typically 0): ") 
-        spin = int(input("Enter the spin (This is typically 0): "))   
-        xyz_content = smiles_to_xyz(SMILES)
-
+        spin = int(input("Enter the spin (This is typically 0): ")) 
+        xyz_content = to_xyz(molecule, molecule_format)
+        
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-
+        return file_name
+    
     #Optimization and vibrational frequency calculation
     @staticmethod
-    def opt_freq_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
-        SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
+    def opt_freq_input(method_choice, basis_choice, methods, basis_sets, orca_tasks, calculation_choice, name, molecule_format):
+        if molecule == 'SMILES':
+            molecule = molecule.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  #Remove () and []
         file_name = (f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_"
-                     f"{SMILES}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
-        coordinate_type = 'xyz' #Coordinate type 
+                     f"{name}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
+        coordinate_type = 'xyz' #Coordinate type
         calculation_type = 'vib + freq'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): ")) 
-        xyz_content = smiles_to_xyz(SMILES)
+        xyz_content = to_xyz(molecule, molecule_format)
 
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
+        return file_name
         
     #NMR calculation
     @staticmethod
-    def nmr_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
-        SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
+    def nmr_input(method_choice, basis_choice, molecule, methods, basis_sets, orca_tasks, calculation_choice, name, molecule_format):
+        if molecule == 'SMILES':
+            molecule = molecule.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  #Remove () and []
         file_name = (f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_"
-                     f"{SMILES}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
-        coordinate_type = 'xyz' #Coordinate type 
+                     f"{name}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
+        coordinate_type = 'xyz' #Coordinate type
         calculation_type = 'nmr'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): ")) 
-        xyz_content = smiles_to_xyz(SMILES)
+        xyz_content = to_xyz(molecule, molecule_format)
 
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-        
+        return file_name
+     
     #Excited states and UV-vis calculation
     @staticmethod
-    def UV_input(method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice):
-        SMILES = SMILES.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  # Remove () and []
+    def UV_input(method_choice, basis_choice, molecule, methods, basis_sets, orca_tasks, calculation_choice, name, molecule_format):
+        if molecule == 'SMILES':
+            molecule = molecule.replace('(', '').replace(')', '').replace('[', '').replace(']', '')  #Remove () and []
         file_name = (f"{methods[method_choice - 1]}_{basis_sets[basis_choice - 1]}_"
-                     f"{SMILES}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
-        coordinate_type = 'xyz' #Coordinate type 
+                     f"{name}_{orca_tasks[calculation_choice - 1].replace(' ', '-')}.inp") #Remove blank space from file name (prevents opening error)
+        coordinate_type = 'xyz' #Coordinate type
         calculation_type = 'uv'
         charge = input("Enter the charge (This is typically 0): ") 
         spin = int(input("Enter the spin (This is typically 0): ")) 
-        xyz_content = smiles_to_xyz(SMILES)
-
+        xyz_content = to_xyz(molecule, molecule_format)
+        
         Input_Generator.write_input_file(file_name, methods[method_choice - 1], basis_sets[basis_choice - 1], 
                                          coordinate_type, charge, spin, xyz_content, calculation_type)
-
+        return file_name
+    
 #Main function
 def main():
+
+    input_types = ["SMILES", "InChI"]
     orca_tasks = ["Molecular Energy", "Geometry Optimization", "Vibrational Frequencies", "Optimize + Vib-Freq", "NMR", "UV-vis + Excited state"]
     methods = ['B3LYP', 'HF', 'MP2', 'CCSD']
     basis_sets = ['STO-3G', '3-21G', '6-31G(d)', '6-311+G(2d,p)', 'def2-SVP', 'def2-TZVP', 'def2-TZVPP', 'def2-QZVPP']
+
+    print("Select format of molecular input: ")
+    input_selection = select_from_menu(input_types)
+    molecule_format = str(input_types[input_selection - 1])
 
     print("Select Calculation: ")
     calculation_choice = select_from_menu(orca_tasks)
@@ -226,9 +257,20 @@ def main():
         method_choice = select_from_menu(methods)
         print("Select basis set: ")
         basis_choice = select_from_menu(basis_sets)
-        SMILES = input("Input molecule in SMILES format: ")
+        molecule = input("Input molecule in " + str(input_types[input_selection - 1]) + " format: ")
 
-        calculation_functions[calculation_choice](method_choice, basis_choice, SMILES, methods, basis_sets, orca_tasks, calculation_choice)
+        #Needs to be tested more
+        if molecule_format == 'SMILES' and not re.match(r'^[^J][0-9BCOHNSOPrIFla@+\-\[\]\(\)\\\/%=#$,.~&!]+', molecule): 
+            print("Invalid SMILES format.")
+            return
+        elif molecule_format == 'InChI' and not re.match(r'^InChI\=1S?\/[A-Za-z0-9\.]+(\+[0-9]+)?(\/[cnpqbtmsih][A-Za-z0-9\-\+\(\)\,\/\?\;\.]+)*$', molecule):
+            print("Invalid InChI format.")
+            return
+        
+        name = input("Enter molecule name: ")
+
+        file_name = calculation_functions[calculation_choice](method_choice, basis_choice, molecule, methods, basis_sets, 
+                                                  orca_tasks, calculation_choice, name, molecule_format)
 
     print('File written')
 
