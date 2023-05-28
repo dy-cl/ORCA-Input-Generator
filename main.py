@@ -5,13 +5,16 @@ import os
 #Menu wrapper function to reuse
 def select_from_menu(options):
 
-    print('\n')
-    for i, option in enumerate(options, 1):
-        print(f"{i}. {option}", end="\t")
-    print()  # Print a new line after the menu options
+    print()
+    max_width = max(len(option) for option in options)  # Find the maximum width of the options
 
-    choice = int(input("Enter choice: "))
-    print()  # Print a new line after the choice
+    for i, option in enumerate(options, 1):
+        centered_option = option.center(max_width)  # Center the option within the maximum width
+        print(f"{i}. {centered_option.strip()}", end=" | ")
+    print()
+
+    choice = int(input("Enter your choice: "))
+    print()
 
     if choice not in range(1, len(options) + 1):
         print("Invalid choice. Please try again.")
@@ -198,7 +201,7 @@ class Input_Generator:
 
 #Main function
 def main():
-    orca_tasks = ["Energy", "Geometry Optimization", "Vibrational Frequencies", "Optimize and Vib-Freq", "NMR", "UV-vis and Excited state"]
+    orca_tasks = ["Molecular Energy", "Geometry Optimization", "Vibrational Frequencies", "Optimize + Vib-Freq", "NMR", "UV-vis + Excited state"]
     methods = ['B3LYP', 'HF', 'MP2', 'CCSD']
     basis_sets = ['STO-3G', '3-21G', '6-31G(d)', 'def2-SVP']
 
