@@ -11,6 +11,10 @@ def select_from_menu(options):
     for i, option in enumerate(options, 1):
         centered_option = option.center(max_width)  # Center the option within the maximum width
         print(f"{i}. {centered_option.strip()}", end=" | ")
+
+        if i % 6 == 0:  #Add a new line after every 6th option
+            print()  
+
     print()
 
     choice = int(input("Enter your choice: "))
@@ -203,7 +207,7 @@ class Input_Generator:
 def main():
     orca_tasks = ["Molecular Energy", "Geometry Optimization", "Vibrational Frequencies", "Optimize + Vib-Freq", "NMR", "UV-vis + Excited state"]
     methods = ['B3LYP', 'HF', 'MP2', 'CCSD']
-    basis_sets = ['STO-3G', '3-21G', '6-31G(d)', 'def2-SVP']
+    basis_sets = ['STO-3G', '3-21G', '6-31G(d)', '6-311+G(2d,p)', 'def2-SVP', 'def2-TZVP', 'def2-TZVPP', 'def2-QZVPP']
 
     print("Select Calculation: ")
     calculation_choice = select_from_menu(orca_tasks)
